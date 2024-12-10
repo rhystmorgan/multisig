@@ -13,8 +13,12 @@
 // currently we will only have spending abilities, but in the future I might
 // expand to other script purposes like staking and voting
 
+pub type SpendAction {
+  assets: List<(ByteArray, ByteArray, Int)>
+}
+
 validator multiSig(cp: PolicyId) {
-  spend(datum: Option<Data>, _r: Data, oref: OutputReference, tx: Transaction) {
+  spend(datum: Option<Data>, r: SpendAction, oref: OutputReference, tx: Transaction) {
     expect Some(ownIn) =
       list.find(
         tx.inputs,
@@ -36,10 +40,13 @@ validator multiSig(cp: PolicyId) {
 
     expect InlineDatum(dat) = configIn.output.datum
     expect cDatum: ConfigDatum = dat 
+
+    let spendingAssets = utils.foldFlatValue(r.assets)
+      
  
     when datum is {
       None -> {
-        expect Some(ownIns) = 
+        let ownIns = 
           list.filter(
             tx.inputs,
             fn(in) {
@@ -47,7 +54,7 @@ validator multiSig(cp: PolicyId) {
             }
           )
 
-        expect Some(ownOuts) = 
+        let ownOuts = 
           list.filter(
             tx.outputs,
             fn(out) {
@@ -57,13 +64,8 @@ validator multiSig(cp: PolicyId) {
 
         // TODO: Make FlatAssetList Redeemer & check inValue == assets.merge(outValue, redeemerValue)
 
-        // let (inValue, outValue) = 
-        //   utils.sumInsOuts(ownIns, ownOuts)
-        
-        // let spendingAssets = 
-        //   list.foldl(
-            
-        //   )
+        let (inValue, outValue) = 
+          utils.sumInsOuts(ownIns, ownOuts)
 
         and {
           list.all(ownIns, fn(in) { in.output.datum == NoDatum }),
@@ -77,9 +79,27 @@ validator multiSig(cp: PolicyId) {
             fn(in) { in.address.payment_credential == ownHash }
           )
 
-        and {
+        if spendingAssets <= ownIn.output.value {
+          let ownOuts = 
+            list.filter(
+              tx.outputs,
+              fn(out) {
+                out.address.payment_credential == ownHash
+              }
+            )
+          
+          expect Some(ownOut) = list.head(ownOuts)
+          
+          and {
+            list.length(ownOuts) == 1,
+            ownIn.value == assets.merge(ownOut.value, spendingAssets),
+            list.count(cDatum.signatories, fn(sig) { tx.extra_signatories, sig }) >= cDatum.threshold,
+          }
+          
+        } else {
           list.count(cDatum.signatories, fn(sig) { tx.extra_signatories, sig }) >= cDatum.threshold,
         }
+
       }
     }
     // has config input
