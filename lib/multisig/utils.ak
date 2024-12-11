@@ -1,4 +1,8 @@
-pub fn sumInsOuts(ins: List<Inputs>, outs: List<Outs>) -> (Value, Value) {
+use aiken/collection/list
+use cardano/assets.{Value}
+use cardano/transaction.{Input, Output}
+
+pub fn sumInsOuts(ins: List<Input>, outs: List<Output>) -> (Value, Value) {
   let inValue =
     list.foldl(
       ins,
@@ -15,11 +19,11 @@ pub fn sumInsOuts(ins: List<Inputs>, outs: List<Outs>) -> (Value, Value) {
 pub fn foldFlatValue(assets: List<(ByteArray, ByteArray, Int)>) -> Value {
   let value =
     list.foldl(
-      r.assets,
+      assets,
       assets.zero,
       fn(asset, acc) {
         let (p, a, i) = asset
-        assets.merge(acc, assets.from_asset(p, n, i))
+        assets.merge(acc, assets.from_asset(p, a, i))
       },
     )
   value
