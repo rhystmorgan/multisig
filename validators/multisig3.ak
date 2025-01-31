@@ -1,12 +1,13 @@
-use aiken/collection/dict
+// use aiken/collection/dict
 use aiken/collection/list
-use cardano/address.{Credential, Script}
+use cardano/address.{Credential}
 use cardano/assets.{PolicyId}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, OutputReference, Transaction,
 }
-use multisig/types.{ConfigAction, ConfigDatum, SpendAction}
-use multisig/utils
+use multisig/types.{ConfigDatum, SpendAction}
+
+// use multisig/utils
 
 //                  //
 // MultiSig Example //
@@ -15,7 +16,7 @@ use multisig/utils
 // What if we remove all limitations except Datum protection?
 
 validator multiWig(cp: PolicyId) {
-  spend(datum: Option<Data>, _r: Data, oref: OutputReference, tx: Transaction) {
+  spend(_datum: Option<Data>, _r: Data, oref: OutputReference, tx: Transaction) {
     expect Some(ownInput) =
       list.find(tx.inputs, fn(input) { input.output_reference == oref })
     let ownHash = ownInput.output.address.payment_credential
@@ -23,7 +24,7 @@ validator multiWig(cp: PolicyId) {
     list.has(tx.withdrawals, Pair(ownHash, 0))
   }
 
-  withdraw(r: SpendAction, c: Credential, tx: Transaction) {
+  withdraw(_r: SpendAction, c: Credential, tx: Transaction) {
     expect Some(configIn) =
       list.find(
         tx.reference_inputs,
